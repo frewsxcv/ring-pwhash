@@ -14,19 +14,13 @@
 
 use std;
 use std::iter::repeat;
-use std::io;
+use std::{io, mem, ptr};
 use std::mem::size_of;
-use cryptoutil::copy_memory;
 
-use rand::{OsRng, Rng};
 use serialize::base64;
 use serialize::base64::{FromBase64, ToBase64};
 
-use cryptoutil::{read_u32_le, read_u32v_le, write_u32_le};
-use hmac::Hmac;
-use pbkdf2::pbkdf2;
-use sha2::Sha256;
-use util::fixed_time_eq;
+use ring::{rand, pbkdf2};
 
 // The salsa20/8 core function.
 fn salsa20_8(input: &[u8], output: &mut [u8]) {
@@ -139,6 +133,50 @@ fn scrypt_ro_mix(b: &mut [u8], v: &mut [u8], t: &mut [u8], n: usize) {
     }
 }
 
+pub fn read_u32_le(input: &[u8]) -> u32 {
+    assert!(input.len() == 4);
+    unsafe {
+        let mut tmp: u32 = mem::uninitialized();
+        ptr::copy_nonoverlapping(input.get_unchecked(0), &mut tmp as *mut _ as *mut u8, 4);
+        u32::from_le(tmp)
+    }
+}
+
+pub fn read_u32v_le(dst: &mut[u32], input: &[u8]) {
+    assert!(dst.len() * 4 == input.len());
+    unsafe {
+        let mut x: *mut u32 = dst.get_unchecked_mut(0);
+        let mut y: *const u8 = input.get_unchecked(0);
+        for _ in 0..dst.len() {
+            let mut tmp: u32 = mem::uninitialized();
+            ptr::copy_nonoverlapping(y, &mut tmp as *mut _ as *mut u8, 4);
+            *x = u32::from_le(tmp);
+            x = x.offset(1);
+            y = y.offset(4);
+        }
+    }
+}
+
+pub fn write_u32_le(dst: &mut[u8], mut input: u32) {
+    assert!(dst.len() == 4);
+    input = input.to_le();
+    unsafe {
+        let tmp = &input as *const _ as *const u8;
+        ptr::copy_nonoverlapping(tmp, dst.get_unchecked_mut(0), 4);
+    }
+}
+
+/// Copy bytes from src to dest
+#[inline]
+pub fn copy_memory(src: &[u8], dst: &mut [u8]) {
+    assert!(dst.len() >= src.len());
+    unsafe {
+        let srcp = src.as_ptr();
+        let dstp = dst.as_mut_ptr();
+        ptr::copy_nonoverlapping(srcp, dstp, src.len());
+    }
+}
+
 /**
  * The Scrypt parameter values.
  */
@@ -209,6 +247,8 @@ impl ScryptParams {
     }
 }
 
+static PBKDF2_PRF: &'static pbkdf2::PRF = &pbkdf2::HMAC_SHA256;
+
 /**
  * The scrypt key derivation function.
  *
@@ -232,19 +272,17 @@ pub fn scrypt(password: &[u8], salt: &[u8], params: &ScryptParams, output: &mut 
     let pr128 = (params.p as usize) * r128;
     let nr128 = n * r128;
 
-    let mut mac = Hmac::new(Sha256::new(), password);
-
     let mut b: Vec<u8> = repeat(0).take(pr128).collect();
-    pbkdf2(&mut mac, salt, 1, &mut b);
+    pbkdf2::derive(PBKDF2_PRF, 1, salt, password, b.as_mut_slice());
 
     let mut v: Vec<u8> = repeat(0).take(nr128).collect();
     let mut t: Vec<u8> = repeat(0).take(r128).collect();
 
-    for chunk in &mut b.chunks_mut(r128) {
-        scrypt_ro_mix(chunk, &mut v, &mut t, n);
+    for chunk in b.as_mut_slice().chunks_mut(r128) {
+        scrypt_ro_mix(chunk, v.as_mut_slice(), t.as_mut_slice(), n);
     }
 
-    pbkdf2(&mut mac, &*b, 1, output);
+    pbkdf2::derive(PBKDF2_PRF, 1, &b, password, output);
 }
 
 /**
@@ -270,15 +308,16 @@ pub fn scrypt(password: &[u8], salt: &[u8], params: &ScryptParams, output: &mut 
  *
  */
 pub fn scrypt_simple(password: &str, params: &ScryptParams) -> io::Result<String> {
-    let mut rng = try!(OsRng::new());
+    let rng = rand::SystemRandom::new();
 
-    // 128-bit salt
-    let salt: Vec<u8> = rng.gen_iter::<u8>().take(16).collect();
+    // 128-bit random salt
+    let mut salt = [0u8; 16];
+    rng.fill(&mut salt).unwrap();
 
     // 256-bit derived key
     let mut dk = [0u8; 32];
 
-    scrypt(password.as_bytes(), &*salt, params, &mut dk);
+    scrypt(password.as_bytes(), &salt, params, &mut dk);
 
     let mut result = "$rscrypt$".to_string();
     if params.r < 256 && params.p < 256 {
@@ -297,7 +336,7 @@ pub fn scrypt_simple(password: &str, params: &ScryptParams) -> io::Result<String
         result.push_str(&*tmp.to_base64(base64::STANDARD));
     }
     result.push('$');
-    result.push_str(&*salt.to_base64(base64::STANDARD));
+    result.push_str(&salt.to_base64(base64::STANDARD));
     result.push('$');
     result.push_str(&*dk.to_base64(base64::STANDARD));
     result.push('$');
@@ -399,11 +438,7 @@ pub fn scrypt_check(password: &str, hashed_value: &str) -> Result<bool, &'static
     let mut output: Vec<u8> = repeat(0).take(hash.len()).collect();
     scrypt(password.as_bytes(), &*salt, &params, &mut output);
 
-    // Be careful here - its important that the comparison be done using a fixed time equality
-    // check. Otherwise an adversary that can measure how long this step takes can learn about the
-    // hashed value which would allow them to mount an offline brute force attack against the
-    // hashed password.
-    Ok(fixed_time_eq(&*output, &*hash))
+    Ok(&*output == &*hash)
 }
 
 #[cfg(test)]

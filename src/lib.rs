@@ -1,6 +1,5 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-    }
-}
+extern crate ring;
+extern crate libc;
+extern crate rustc_serialize as serialize;
+
+pub mod scrypt;
