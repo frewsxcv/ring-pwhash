@@ -20,7 +20,7 @@ use std::mem::size_of;
 use serialize::base64;
 use serialize::base64::{FromBase64, ToBase64};
 
-use ring::{rand, pbkdf2};
+use ring::{rand, pbkdf2, constant_time};
 
 // The salsa20/8 core function.
 fn salsa20_8(input: &[u8], output: &mut [u8]) {
@@ -438,7 +438,7 @@ pub fn scrypt_check(password: &str, hashed_value: &str) -> Result<bool, &'static
     let mut output: Vec<u8> = repeat(0).take(hash.len()).collect();
     scrypt(password.as_bytes(), &*salt, &params, &mut output);
 
-    Ok(&*output == &*hash)
+    Ok(constant_time::verify_slices_are_equal(&output, &hash).is_ok())
 }
 
 #[cfg(test)]
