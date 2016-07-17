@@ -2,7 +2,8 @@
 name        = "ring-pwhash"
 version     = "0.0.0"
 description = "A collection of password hashing functions, using *ring* cryptographic primitives"
-authors     = ["Tony Arcieri <bascule@gmail.com>"]
+authors     = ["Tony Arcieri <bascule@gmail.com>", "The Rust-Crypto Project Developers"]
+license     = "MIT/Apache-2.0"
 
 [lib]
 name = "ring_pwhash"
