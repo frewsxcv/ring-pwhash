@@ -1,0 +1,8 @@
+[package]
+name        = "ring-pwhash"
+version     = "0.0.0"
+description = "A collection of password hashing functions, using *ring* cryptographic primitives"
+authors     = ["Tony Arcieri <bascule@gmail.com>"]
+
+[lib]
+name = "ring_pwhash"
