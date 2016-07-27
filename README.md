@@ -9,7 +9,7 @@ but does not implement any password hashing functions except PBKDF2.
 
 This library implements password hashing algorithms based on [*ring*][ring]'s cryptographic
 primitives, serving as a "companion library" for applications that want to leverage
-[*ring*][ring] as their one and only cryptography library, and also providing high-performance
+[*ring*][ring] as their one-and-only cryptography library, and also providing high-performance
 password hash implementations thanks to the speed of [*ring*][ring]'s core primitives.
 
 ## Supported Algorithms
