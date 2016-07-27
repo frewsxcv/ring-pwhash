@@ -47,8 +47,9 @@ cargo test scrypt::test::test_scrypt  16.92s user 0.14s system 107% cpu 15.833 t
 
 ## License
 
-ring-pwhash is a fork of rust-crypto, and is dual licensed under the MIT and
+ring-pwhash is a fork of [rust-crypto], and is dual licensed under the MIT and
 Apache 2.0 licenses, the same licenses as rust-crypto.
 
 [ring]: https://github.com/briansmith/ring
 [scrypt]: https://en.wikipedia.org/wiki/Scrypt
+[rust-crypto]: https://github.com/DaGenix/rust-crypto
