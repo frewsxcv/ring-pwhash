@@ -16,8 +16,8 @@ password hash implementations thanks to the speed of [*ring*][ring]'s core primi
 
 * [**scrypt:**][scrypt] Colin Percival's Salsa20/8+PBKDF2-based password hashing function
 
-No other algorithms are supported at this time, although it'd be great to add additiona algorithms!
-Specifically Argon2 and bcrypt are both good candidates. Pull Requests Accepted!
+No other algorithms are supported at this time, although it'd be great to add additional algorithms!
+Argon2 and bcrypt are both good candidates. Pull Requests Accepted!
 
 ## Benchmark
 
