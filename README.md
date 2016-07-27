@@ -14,7 +14,7 @@ password hash implementations thanks to the speed of [*ring*][ring]'s core primi
 
 ## Supported Algorithms
 
-* **scrypt:** Colin Percival's Salsa20/8+PBKDF2-based password hashing function
+* [**scrypt:**][scrypt] Colin Percival's Salsa20/8+PBKDF2-based password hashing function
 
 No other algorithms are supported at this time, although it'd be great to add additiona algorithms!
 Specifically Argon2 and bcrypt are both good candidates. Pull Requests Accepted!
@@ -51,3 +51,4 @@ ring-pwhash is a fork of rust-crypto, and is dual licensed under the MIT and
 Apache 2.0 licenses, the same licenses as rust-crypto.
 
 [ring]: https://github.com/briansmith/ring
+[scrypt]: https://en.wikipedia.org/wiki/Scrypt
